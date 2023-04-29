@@ -7,48 +7,63 @@ namespace Assets._Scripts.AStar
 {
     public class AStar
     {
-        private const    int        MaxNeighbours = 8;
-        private readonly PathNode[] neighbours    = new PathNode[MaxNeighbours];
+        private readonly bool       _canDiagonalMove;
+        private readonly int        _maxNeighbours;
+        private readonly PathNode[] _neighbours;
 
-        private readonly int                                 maxSteps;
-        private readonly IBinaryHeap<Vector2Int, PathNode>   frontier;
-        private readonly HashSet<Vector2Int>                 ignoredPositions;
-        private readonly List<Vector2Int>                    output;
-        private readonly IDictionary<Vector2Int, Vector2Int> links;
+        private readonly int                                 _maxSteps;
+        private readonly IBinaryHeap<Vector2Int, PathNode>   _frontier;
+        private readonly HashSet<Vector2Int>                 _ignoredPositions;
+        private readonly List<Vector2Int>                    _output;
+        private readonly IDictionary<Vector2Int, Vector2Int> _links;
         private          List<PathNode>                      _allNodes;
 
         /// <summary>
         /// Creation of new path finder.
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public AStar(int maxSteps = int.MaxValue, int initialCapacity = 0)
+        public AStar(bool canDiagonalMove = true, int maxSteps = int.MaxValue, int initialCapacity = 0)
         {
             if (maxSteps <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maxSteps));
             if (initialCapacity < 0)
                 throw new ArgumentOutOfRangeException(nameof(initialCapacity));
-
-            this.maxSteps    = maxSteps;
-            frontier         = new BinaryHeap<Vector2Int, PathNode>(a => a.Position, initialCapacity);
-            ignoredPositions = new HashSet<Vector2Int>(initialCapacity);
-            output           = new List<Vector2Int>(initialCapacity);
-            links            = new Dictionary<Vector2Int, Vector2Int>(initialCapacity);
-            _allNodes        = new List<PathNode>();
+            _canDiagonalMove  = canDiagonalMove;
+            _maxNeighbours    = !_canDiagonalMove ? 4 : 8;
+            _neighbours       = new PathNode[_maxNeighbours];
+            this._maxSteps    = maxSteps;
+            _frontier         = new BinaryHeap<Vector2Int, PathNode>(a => a.Position, initialCapacity);
+            _ignoredPositions = new HashSet<Vector2Int>(initialCapacity);
+            _output           = new List<Vector2Int>(initialCapacity);
+            _links            = new Dictionary<Vector2Int, Vector2Int>(initialCapacity);
+            _allNodes         = new List<PathNode>();
         }
 
-        public List<Vector2Int>? Calculate(SKPointI start, SKPointI end, bool[,] map)
+        public List<Vector2Int>? Calculate(SKPointI start, SKPointI end, int[,] map)
         {
             var lst = new List<Vector2Int>();
             for (var i = 0; i < map.GetLength(1); i++)
             for (var j = 0; j < map.GetLength(0); j++)
-                if (map[j, i])
+                if (map[j, i] == 1)
                     lst.Add(new Vector2Int(j, i));
 
             return Calculate(new Vector2Int(start), new Vector2Int(end), lst);
         }
+
         public List<Vector2Int>? Calculate(SKPointI start, SKPointI end, List<Vector2Int> obstacles)
         {
             return Calculate(new Vector2Int(start), new Vector2Int(end), obstacles);
+        }
+
+        public SKPointI GetNextPoint(SKPointI start, SKPointI end, int[,] map)
+        {
+            var lst = Calculate(start, end, map);
+            if (lst == null)
+                return start;
+            if (lst.Count < 2)
+                return new SKPointI(lst[0].X, lst[0].Y);
+            lst.Reverse();
+            return new SKPointI(lst[1].X, lst[1].Y);
         }
 
         /// <summary>
@@ -64,12 +79,12 @@ namespace Assets._Scripts.AStar
             if (!GenerateNodes(start, target, obstacles))
                 return null;
 
-            output.Clear();
-            output.Add(target);
+            _output.Clear();
+            _output.Add(target);
 
-            while (links.TryGetValue(target, out target))
-                output.Add(target);
-            path = output;
+            while (_links.TryGetValue(target, out target))
+                _output.Add(target);
+            path = _output;
             return path;
         }
 
@@ -98,16 +113,16 @@ namespace Assets._Scripts.AStar
         private bool GenerateNodes(Vector2Int start, Vector2Int target, IReadOnlyCollection<Vector2Int> obstacles)
         {
             _allNodes.Clear();
-            frontier.Clear();
-            ignoredPositions.Clear();
-            links.Clear();
-            frontier.Enqueue(new PathNode(start, target, 0));
-            ignoredPositions.UnionWith(obstacles);
+            _frontier.Clear();
+            _ignoredPositions.Clear();
+            _links.Clear();
+            _frontier.Enqueue(new PathNode(start, target, 0));
+            _ignoredPositions.UnionWith(obstacles);
             var step = 0;
-            while (frontier.Count > 0 && step++ <= maxSteps)
+            while (_frontier.Count > 0 && step++ <= _maxSteps)
             {
-                var current = frontier.Dequeue();
-                ignoredPositions.Add(current.Position);
+                var current = _frontier.Dequeue();
+                _ignoredPositions.Add(current.Position);
 
                 if (current.Position.Equals(target))
                     return true;
@@ -121,26 +136,26 @@ namespace Assets._Scripts.AStar
 
         private void GenerateFrontierNodes(PathNode parent, Vector2Int target)
         {
-            neighbours.Fill(parent, target);
-            foreach (var newNode in neighbours)
+            _neighbours.Fill(parent, target);
+            foreach (var newNode in _neighbours)
             {
                 _allNodes.Add(newNode);
                 // Position is already checked or occupied by an obstacle.
-                if (ignoredPositions.Contains(newNode.Position))
+                if (_ignoredPositions.Contains(newNode.Position))
                     continue;
 
                 // Node is not present in queue.
-                if (!frontier.TryGet(newNode.Position, out var existingNode))
+                if (!_frontier.TryGet(newNode.Position, out var existingNode))
                 {
-                    frontier.Enqueue(newNode);
-                    links[newNode.Position] = parent.Position;
+                    _frontier.Enqueue(newNode);
+                    _links[newNode.Position] = parent.Position;
                 }
 
                 // Node is present in queue and new optimal path is detected.
                 else if (newNode.TraverseDistance < existingNode.TraverseDistance)
                 {
-                    frontier.Modify(newNode);
-                    links[newNode.Position] = parent.Position;
+                    _frontier.Modify(newNode);
+                    _links[newNode.Position] = parent.Position;
                 }
             }
         }

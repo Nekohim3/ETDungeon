@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using SkiaSharp;
+using UnityEngine;
+using Vector2Int = Assets._Scripts.AStar.Vector2Int;
 
 namespace Assets._Scripts.Extensions
 {
@@ -53,7 +55,11 @@ namespace Assets._Scripts.Extensions
 
         public static SKPoint OffsetPoint(this SKPoint p, float x, float y) => new(p.X + x, p.Y + y); // p with { X = p.X + x, Y = p.Y + y };
         //public static float   DistanceToPoint(this  SKPointI p, SKPointI pp) => new SKLineI(p, pp).Length;
-
+        public static Vector3       ToVector3(this      SKPointI         p)              => new Vector3(p.X, p.Y, 0);
+        public static Vector3       ToVector3(this      Vector2Int       p)              => new Vector3(p.X, p.Y, 0);
+        public static List<Vector3> ToVector3(this      List<Vector2Int> p)              => p.Select(_ => new Vector3(_.X, _.Y)).ToList(); //new Vector3(p.X, p.Y, 0);
+        public static Vector3       InvertY(this        Vector3          p)              => new Vector3(p.x, -p.y);
+        public static bool          CloseToVector3(this Vector3          p1, Vector3 p2) => p1.x.IsEqual(p2.x, 0.1f) && p1.y.IsEqual(p2.y, 0.1f);
         #endregion
 
         #region Other

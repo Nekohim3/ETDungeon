@@ -4,6 +4,18 @@ using Assets._Scripts.DungeonGenerator;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+public static class CurrentMap
+{
+    public static Map    Map;
+    public static int[,] MapArr;
+
+    public static void SetMap(Map map, int extend = 0)
+    {
+        Map    = map;
+        MapArr = Map.GetMapArray(extend);
+    }
+}
+
 public class MapGenerator : MonoBehaviour
 {
     public Tilemap  WallTilemap;
@@ -38,31 +50,31 @@ public class MapGenerator : MonoBehaviour
 
     private void GenerateMapAndSetPlayer()
     {
-        var map = Generator.GenerateMap(null,
+        CurrentMap.SetMap(Generator.GenerateMap(null,
                                         RoomMinWidth..RoomMaxWidth,
                                         RoomMinHeight..RoomMaxHeight,
                                         RoomMinCount..RoomMaxCount,
                                         MinDistanceRooms..MaxDistanceRooms,
                                         MinPassWidth..MaxPassWidth,
                                         PassClearPercent,
-                                        Seed);
-        var mapArray = map.GetMapArray(OuterCount);
+                                        Seed), OuterCount);
         GroundTilemap.ClearAllTiles();
         WallTilemap.ClearAllTiles();
-        for (var i = 0; i < mapArray.GetLength(0); i++)
-        for (var j = 0; j < mapArray.GetLength(1); j++)
+        for (var i = 0; i < CurrentMap.MapArr.GetLength(0); i++)
+        for (var j = 0; j < CurrentMap.MapArr.GetLength(1); j++)
         {
-            switch (mapArray[i, j])
+            switch (CurrentMap.MapArr[i, j])
             {
-                case 0:
-                    GroundTilemap.SetTile(new Vector3Int(i, -j), GroundTile);
-                    break;
                 case 1:
                     WallTilemap.SetTile(new Vector3Int(i, -j), WallTile);
+                    break;
+                    case 0:
+                    GroundTilemap.SetTile(new Vector3Int(i, -j), GroundTile);
                     break;
             }
         }
 
-        GameObject.FindWithTag("Player").transform.position = new Vector3(map.Rooms[0].MidPoint.X + OuterCount, -map.Rooms[0].MidPoint.Y - OuterCount);
+        GameObject.FindWithTag("Player").transform.position = new Vector3(CurrentMap.Map.Rooms[0].MidPoint.X + OuterCount, -CurrentMap.Map.Rooms[0].MidPoint.Y - OuterCount);
+        GameObject.FindWithTag("Enemy").transform.position  = new Vector3(CurrentMap.Map.Rooms[1].MidPoint.X + OuterCount, -CurrentMap.Map.Rooms[1].MidPoint.Y - OuterCount);
     }
 }

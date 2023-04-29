@@ -272,7 +272,7 @@ namespace Assets._Scripts.DungeonGenerator
                 }
             }
 
-            var p = new AStar.AStar(1000);
+            var p = new AStar.AStar(false, 1000);
             for (var i = 0; i < Map.Passes.Count; i++)
             {
                 var x = Map.Passes[i];
